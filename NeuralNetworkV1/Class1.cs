@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Serialization;
 using System.IO;
@@ -33,6 +32,10 @@ namespace NeuralNetworkV1
         {
             this.nodes = new double[n];
             number = n;
+        }
+        public virtual void Apply()
+        {
+
         }
     }
 
@@ -159,7 +162,7 @@ namespace NeuralNetworkV1
 
         public override double[] Propagate(double[] errors, double speed, Layer prevLayer)
         {
-            //double[] prevErrors = new double[prevLayer.number];
+            double[] prevErrors = new double[prevLayer.number];
             for (int i = 0; i < this.number; i++)
             {
                 for (int j = 0; j < prevLayer.number; j++)
@@ -203,7 +206,6 @@ namespace NeuralNetworkV1
         { }
 
     }
-
     [Serializable()]
     public class NeuralNet
     {
@@ -267,6 +269,6 @@ namespace NeuralNetworkV1
             outputLayer.Apply();
             return result;
         }
-        
+
     }
 }
