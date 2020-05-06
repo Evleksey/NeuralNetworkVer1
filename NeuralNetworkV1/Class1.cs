@@ -324,7 +324,25 @@ namespace NeuralNetworkV1
             }
             outputLayer.Apply();
             return result;
+        }      
+
+    }
+
+    public static class Progress
+    {
+        public static void SaveNet(NeuralNet net)
+        {
+            StreamWriter writer = new StreamWriter("SavedNet.neural", false);
+            writer.Write(JsonConvert.SerializeObject(net));
+            writer.Flush();
+            writer.Close();
         }
 
+        public static void LoadNet(ref NeuralNet net)
+        {
+            StreamReader reader = new StreamReader("SavedNet.neural");
+            net = (NeuralNet)JsonConvert.DeserializeObject(reader.ReadToEnd());
+            reader.Close();
+        }
     }
 }
