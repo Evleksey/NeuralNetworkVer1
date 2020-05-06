@@ -2,24 +2,35 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Xml.Serialization;
+using Newtonsoft.Json;
 using System.IO;
 namespace NeuralNetworkV1
 {
     [Serializable]
     public static class Sigmoid
     {
+        /// <summary>
+        /// Value normalazing function
+        /// </summary>
+        /// <param name="val">value to normalize</param>
+        /// <returns>Normalized value between 0 - 1</returns>
         public static double Activation(double val)
         {
             return (1 / (1 + Math.Pow(Math.E, -val)));
         }
 
+        /// <summary>
+        /// Reverse of normalizing
+        /// </summary>
+        /// <param name="val">Value to denormalize</param>
+        /// <returns>original value</returns>
         public static double ActivationDerivative (double val)
         {
             return (Activation(val) * (1 - Activation(val)));
         }
     }
     
+
     public abstract class Layer
     {
         public bool loggingEnabled = false;
@@ -39,12 +50,13 @@ namespace NeuralNetworkV1
         }
     }
 
+
     [Serializable()]
     public class HiddenLayer : Layer
     {
         public double[,] weights;
         public double[] biases;
-        public double[,] weightCorrction;
+        public double[,] weightCorrection;
         public double[] biasCorrecton;
 
         public HiddenLayer()
@@ -55,7 +67,7 @@ namespace NeuralNetworkV1
             Random rnd = new Random();            
             this.biases = new double[n];
             this.biasCorrecton = new double[n];
-            this.weightCorrction = new double[x,n];
+            this.weightCorrection = new double[x,n];
             this.weights = new double[x, n];
             for (int i = 0; i < x; i++)
             {
@@ -66,6 +78,11 @@ namespace NeuralNetworkV1
                 }
             }
         }
+
+        /// <summary>
+        /// Computes all neurons 
+        /// </summary>
+        /// <param name="prev">Previous layer neurons</param>
         public void ComputeNodes(Layer prev)
         {
             StreamWriter writer = new StreamWriter("E:/log.txt", true);
@@ -92,6 +109,14 @@ namespace NeuralNetworkV1
             writer.Close();
         }
 
+
+        /// <summary>
+        /// Computes changes by backpropagating errors
+        /// </summary>
+        /// <param name="errors">Vector of error values</param>
+        /// <param name="speed">Speed modifier</param>
+        /// <param name="prevLayer">Previous layer neurons</param>
+        /// <returns>Errors of previous layer</returns>
         public virtual double[] Propagate(double[] errors, double speed, Layer prevLayer)
         {
             StreamWriter writer = new StreamWriter("E:/log.txt", true);
@@ -120,10 +145,10 @@ namespace NeuralNetworkV1
 
                 for (int j = 0; j < prevLayer.number; j++)
                 {
-                    weightCorrction[j, i] = speed * prevErrors[i] * Sigmoid.Activation(prevLayer.nodes[j]);
+                    weightCorrection[j, i] = speed * prevErrors[i] * Sigmoid.Activation(prevLayer.nodes[j]);
                     if (loggingEnabled)
                     {
-                        //writer.WriteLine($"Weight correction [{i},{j}] : value = { weightCorrction[j, i]}");
+                        //writer.WriteLine($"Weight correction [{i},{j}] : value = { weightCorrection[j, i]}");
                     }
                 }
                 biasCorrecton[i] = prevErrors[i] * speed;
@@ -137,19 +162,25 @@ namespace NeuralNetworkV1
             return (prevErrors);
         }
 
+        /// <summary>
+        /// Applies changes to weights and biases
+        /// </summary>
         public void Apply()
         {
             for (int i = 0; i < number; i++)
             {
                 for (int j = 0; j < weights.GetLength(0); j++)
                 {
-                    weights[j, i] += weightCorrction[j, i];
+                    weights[j, i] += weightCorrection[j, i];
                 }
                 biases[i] = biasCorrecton[i];
             }
         }
 
     }
+
+
+
     [Serializable()]
     public class OutputLayer : HiddenLayer
     {
@@ -160,6 +191,13 @@ namespace NeuralNetworkV1
         {
         }
 
+        /// <summary>
+        /// Computes changes by backpropagating errors.
+        /// </summary>
+        /// <param name="errors">Vector of error values</param>
+        /// <param name="speed">Speed modifier</param>
+        /// <param name="prevLayer">Previous layer neurons</param>
+        /// <returns>Errors of previous layer</returns>
         public override double[] Propagate(double[] errors, double speed, Layer prevLayer)
         {
             double[] prevErrors = new double[prevLayer.number];
@@ -172,7 +210,7 @@ namespace NeuralNetworkV1
 
                 for (int j = 0; j < prevLayer.number; j++)
                 {
-                    weightCorrction[j, i] = speed * errors[i] * Sigmoid.Activation(prevLayer.nodes[j]);
+                    weightCorrection[j, i] = speed * errors[i] * Sigmoid.Activation(prevLayer.nodes[j]);
                 }
                 biasCorrecton[i] =  speed * errors[i];
             }
@@ -187,7 +225,7 @@ namespace NeuralNetworkV1
             {
                 for (int j = 0; j < prevLayer.number; j++)
                 {
-                    weightCorrction[i,j] = speed * errors[i] * prevLayer.nodes[j];
+                    weightCorrection[i,j] = speed * errors[i] * prevLayer.nodes[j];
                     prevErrors[j] += errors[i] * weights[i, j];
                 }
                 biasCorrecton[i] = speed * errors[i];
@@ -196,6 +234,8 @@ namespace NeuralNetworkV1
         }
         */
     }
+
+
     [Serializable()]
     public class InputLayer : Layer
     {
@@ -206,6 +246,9 @@ namespace NeuralNetworkV1
         { }
 
     }
+
+
+
     [Serializable()]
     public class NeuralNet
     {
@@ -230,6 +273,13 @@ namespace NeuralNetworkV1
             outputLayer = new HiddenLayer(outputNodes, hiddenNodes);
         }
 
+
+
+        /// <summary>
+        /// Computes all neurons in all layers.
+        /// </summary>
+        /// <param name="input">Input vector</param>
+        /// <returns>Vector of probabilities</returns>
         public double[] Compute(double[] input)
         {
             double[] output = new double[outputLayer.number];
@@ -247,6 +297,12 @@ namespace NeuralNetworkV1
             return (output);
         }
 
+        /// <summary>
+        /// Computes all neurons in all layers, propagetes error.
+        /// </summary>
+        /// <param name="input">Input vector</param>
+        /// <param name="expected">Vector of expected result probabilities</param>
+        /// <returns>Vector of probabilities</returns>
         public double[] Learn(double[] input, double[] expected)
         {
             double[] result = this.Compute(input);
